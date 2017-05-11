@@ -18,22 +18,12 @@
 #error FWK_ENUM requires BOOST_PP_VARIADICS == 1
 #endif
 
+#include <boost/optional.hpp>
 #include <boost/preprocessor/list/to_tuple.hpp>
 #include <boost/preprocessor/list/transform.hpp>
 #include <boost/preprocessor/variadic/to_list.hpp>
 
-#ifdef NDEBUG
-#define DASSERT(expr) ((void)0)
-#else
-#define DASSERT(expr) assert(expr)
-#endif
-
-#include <boost/optional.hpp>
-
 namespace fwk {
-
-// You can switch this to something else
-template <class T> using optional = boost::optional<T>;
 
 #define FWK_STRINGIZE(...) FWK_STRINGIZE_(__VA_ARGS__)
 #define FWK_STRINGIZE_(...) #__VA_ARGS__
@@ -72,82 +62,76 @@ template <class Type> class EnumRange {
 	auto end() const { return Iter(m_max); }
 	int size() const { return m_max - m_min; }
 
-	EnumRange(int min, int max) : m_min(min), m_max(max) { DASSERT(min >= 0 && max >= min); }
+	EnumRange(int min, int max) : m_min(min), m_max(max) { assert(min >= 0 && max >= min); }
 
   protected:
 	int m_min, m_max;
 };
 
-template <int size_> struct StringRange {
+template <int size_> class EnumInfo {
+  public:
 	enum { size = size_ };
-	StringRange(const char *const ptr[size]) : strings(ptr) {}
+	EnumInfo(const char *const ptr[size]) : strings(ptr) {}
 
-	inline int toEnum(const char *string) const {
-		DASSERT(string);
+	int toEnum(const char *string) const {
+		assert(string);
 		for(int n = 0; n < size; n++)
 			if(strcmp(string, strings[n]) == 0)
 				return n;
 		return -1;
 	}
-	const char *fromEnum(int n) const { return strings[n]; }
+	const char *toString(int n) const { return strings[n]; }
 
   private:
 	const char *const *strings;
 };
 
-// Safe enum class
-// Initially initializes to 0 (first element). Converts to int, can be easily used as
-// an index into some array. Can be converted to/from strings, which are automatically generated
-// from enum names. Enum with strings cannot be defined at function scope. Some examples are
-// available in src/test/enums.cpp.
-#define DEFINE_ENUM(Type, ...)                                                                     \
+#define FWK_ENUM(Type, ...)                                                                        \
 	enum class Type : unsigned char { __VA_ARGS__ };                                               \
-	inline auto enumStrings(Type) {                                                                \
+	inline auto enumInfo(Type) {                                                                   \
 		static const char *const s_strings[] = {FWK_STRINGIZE_LIST(__VA_ARGS__)};                  \
 		constexpr int size = fwk::arraySize(s_strings);                                            \
-		return StringRange<size>(s_strings);                                                       \
-	}                                                                                              \
-	constexpr int enumCount(Type) { return decltype(enumStrings(Type()))::size; }
+		return EnumInfo<size>(s_strings);                                                          \
+	}
 
 template <class T> struct IsEnum {
-	template <class C> static auto test(int) -> decltype(enumCount(C()));
+	template <class C> static auto test(int) -> decltype(enumInfo(C()));
 	template <class C> static auto test(...) -> void;
-	enum { value = std::is_same<int, decltype(test<T>(0))>::value };
+	enum { value = !std::is_same<void, decltype(test<T>(0))>::value };
 };
 
-template <class T> auto enumNext(T value) -> typename std::enable_if<IsEnum<T>::value, T>::type {
-	return T((int(value) + 1) % enumCount(T()));
-}
+template <class TEnum, class T>
+using EnableForEnum = typename std::enable_if<IsEnum<TEnum>::value, T>::type;
 
-template <class T> auto enumPrev(T value) -> typename std::enable_if<IsEnum<T>::value, T>::type {
-	return T((int(value) + (enumCount(T()) - 1)) % enumCount(T()));
-}
-
-template <class T>
-static auto fromString(const char *str) ->
-	typename std::enable_if<IsEnum<T>::value, optional<T>>::type {
-	int id = enumStrings(T()).toEnum(str);
+template <class T> auto fromString(const char *str) -> EnableForEnum<T, boost::optional<T>> {
+	int id = enumInfo(T()).toEnum(str);
 	if(id != -1)
 		return T(id);
 	return boost::none;
 }
 
-template <class T>
-static auto fromString(const std::string &str) ->
-	typename std::enable_if<IsEnum<T>::value, T>::type {
+template <class T> auto fromString(const std::string &str) -> EnableForEnum<T, T> {
 	return fromString<T>(str.c_str());
 }
 
-template <class T>
-static auto toString(T value) -> typename std::enable_if<IsEnum<T>::value, const char *>::type {
-	return enumStrings(T()).fromEnum((int)value);
+template <class T> auto toString(T value) -> EnableForEnum<T, const char *> {
+	return enumInfo(T()).toString((int)value);
 }
 
-template <class T> constexpr auto count() -> typename std::enable_if<IsEnum<T>::value, int>::type {
-	return enumCount(T());
+template <class T> constexpr auto count() -> EnableForEnum<T, int> {
+	return decltype(enumInfo(T()))::size;
 }
-template <class T> auto all() -> typename std::enable_if<IsEnum<T>::value, EnumRange<T>>::type {
+
+template <class T> auto all() -> EnableForEnum<T, EnumRange<T>> {
 	return EnumRange<T>(0, count<T>());
+}
+
+template <class T> auto next(T value) -> EnableForEnum<T, T> {
+	return T((int(value) + 1) % count<T>());
+}
+
+template <class T> auto prev(T value) -> EnableForEnum<T, T> {
+	return T((int(value) + (count<T>() - 1)) % count<T>());
 }
 }
 
