@@ -1,8 +1,6 @@
-# fwk::enum
+## fwk::enum ?
 
-## WTF is fwk::enum?
-
-It's a header-only library with an improved enum class. Features:
+It's a header-only C++14 library with an improved enum class. Features:
 - abitility to iterate over, enumerate in a range for loop and count all elements
 - conversion to / from strings (const char*)
 - no weirdness, you can use it just like you would use enum class
@@ -21,7 +19,7 @@ For more goodness (including EnumMap) have a look at libfwk:
 ## Limitations
 - you cannot specify custom values for each enum
 - you cannot define enums within class or function scope
-- number of enum elements is limited to 64 (AFAIK); it depends on boost::preprocessor
+- number of enum elements is limited to 64 (AFAIK: it depends on boost::preprocessor)
 
 ## Examples
 
@@ -29,28 +27,24 @@ For more goodness (including EnumMap) have a look at libfwk:
 
 FWK_ENUM(MyEnum, item_one, item_two, item_three, item_four);
 
-void someFunc() {
-	fromString<MyEnum>("item_two") == MyEnum::item_two;
-	fromString<MyEnum>("not an item") == boost::none;
-	string("item_three") == toString(MyEnum::item_three);
+fromString<MyEnum>("item_two") == MyEnum::item_two;
+fromString<MyEnum>("not an item") == boost::none;
+string("item_three") == toString(MyEnum::item_three);
 
-	string text;
-	for(auto elem : all<MyEnum>())
-		text = text + toString(elem) + " ";
+string text;
+for(auto elem : all<MyEnum>())
+	text = text + toString(elem) + " ";
 
-	// Cyclic iteration over enum values
-	next(MyEnum::item_four) == MyEnum::item_one;
-	prev(MyEnum::item_three) == MyEnum::item_two;
+// Cyclic iteration over enum values
+next(MyEnum::item_four) == MyEnum::item_one;
+prev(MyEnum::item_three) == MyEnum::item_two;
 
-	// It's better to use EnumMap from libfwk instead: it's just as fast
-	// and it provides some compile and run time checks
-	int values[count<MyOtherEnum>()] = {1, 2, 3, 4, 5};
+// It's better to use EnumMap from libfwk instead: it's just as fast
+// and it provides some compile and run time checks
+int values[count<MyOtherEnum>()] = {1, 2, 3, 4, 5};
 
-	for(auto elem : all<MyOtherEnum>())
-		cout << elem << ": " << values[(int)elem] << endl;
-
-	return 0;
-}
+for(auto elem : all<MyOtherEnum>())
+	cout << elem << ": " << values[(int)elem] << endl;
 ```
 
 ## License
