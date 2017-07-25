@@ -1,17 +1,19 @@
 ## fwk::enum ?
 
-It's a header-only C++14 library with an improved enum class. Features:
-- abitility to iterate over, enumerate in a range for loop and count all elements
-- flag support without any additional code
-- conversion to / from strings (const char*)
-- no weirdness, you can use it just like you would use enum class
-- VERY lightweight: less than 250 lines of code in a single file
-- fast compilation and low runtime overhead
-- depends only on boost (preprocessor & optional)
-- enums safe to use in switches (assuming decent compiler)
+It's a header-only C++14 library with an improved enum class. Features:  
 
-For more goodness (including EnumMap) have a look at libfwk:
-[https://github.com/nadult/libfwk](https://github.com/nadult/libfwk)
+- ability to iterate over, enumerate in a range-for and count all elements  
+- flag support without any additional code
+- conversion to / from strings (const char*)  
+- no weirdness, you can use it just like you would use enum class  
+- VERY lightweight: less than 250 lines of code in a single file  
+- fast compilation and low runtime overhead  
+- depends only on boost (preprocessor & optional)  
+- enums safe to use in switches (assuming decent compiler)  
+
+
+For more goodness (including EnumMap) have a look at libfwk:  
+[https://github.com/nadult/libfwk](https://github.com/nadult/libfwk) 
 
 ## Requirements
 - compiler with C++14 support
@@ -62,5 +64,5 @@ MyFlags flags = flags1 ^ MyEnum::item_one;
 
 ## License
 
-fwk::enum is distributed under the terms of Boost Software License (Version 1.0);
+fwk::enum is distributed under the terms of Boost Software License (version 1.0).  
 See license.txt for details.
