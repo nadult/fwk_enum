@@ -38,6 +38,19 @@ namespace fwk {
 
 template <class T, int size> constexpr int arraySize(T (&)[size]) noexcept { return size; }
 
+struct EnabledType {};
+struct DisabledType;
+
+namespace detail {
+	struct ValidType {
+		template <class A> using Arg = A;
+	};
+}
+
+template <bool cond, class InvalidArg = DisabledType>
+using EnableIf =
+	typename std::conditional<cond, detail::ValidType, InvalidArg>::type::template Arg<EnabledType>;
+
 template <class Type> class EnumRange {
   public:
 	class Iter {
@@ -90,47 +103,49 @@ template <int size_> class EnumInfo {
 	enum class Type : unsigned char { __VA_ARGS__ };                                               \
 	inline auto enumInfo(Type) {                                                                   \
 		static const char *const s_strings[] = {FWK_STRINGIZE_LIST(__VA_ARGS__)};                  \
+		static_assert(fwk::arraySize(s_strings) <= 64, "Maximum number of enum elements is 64");   \
 		constexpr int size = fwk::arraySize(s_strings);                                            \
 		return EnumInfo<size>(s_strings);                                                          \
 	}
 
-template <class T> struct IsEnum {
-	template <class C> static auto test(int) -> decltype(enumInfo(C()));
-	template <class C> static auto test(...) -> void;
-	enum { value = !std::is_same<void, decltype(test<T>(0))>::value };
-};
+struct NotAnEnum;
 
-template <class TEnum, class T>
-using EnableForEnum = typename std::enable_if<IsEnum<TEnum>::value, T>::type;
+namespace detail {
+	template <class T> struct IsEnum {
+		template <class C> static auto test(int) -> decltype(enumInfo(C()));
+		template <class C> static auto test(...) -> void;
+		enum { value = !std::is_same<void, decltype(test<T>(0))>::value };
+	};
+}
 
-template <class T> auto fromString(const char *str) -> EnableForEnum<T, boost::optional<T>> {
+template <class T> constexpr bool isEnum() { return detail::IsEnum<T>::value; }
+
+template <class T> using EnableIfEnum = EnableIf<isEnum<T>(), NotAnEnum>;
+
+template <class T, EnableIfEnum<T>...> boost::optional<T> fromString(const char *str) {
 	int id = enumInfo(T()).toEnum(str);
 	if(id != -1)
 		return T(id);
 	return boost::none;
 }
 
-template <class T> auto fromString(const std::string &str) -> EnableForEnum<T, T> {
+template <class T, EnableIfEnum<T>...> T fromString(const std::string &str) {
 	return fromString<T>(str.c_str());
 }
 
-template <class T> auto toString(T value) -> EnableForEnum<T, const char *> {
+template <class T, EnableIfEnum<T>...> const char *toString(T value) {
 	return enumInfo(T()).toString((int)value);
 }
 
-template <class T> constexpr auto count() -> EnableForEnum<T, int> {
+template <class T, EnableIfEnum<T>...> constexpr int count() {
 	return decltype(enumInfo(T()))::size;
 }
 
-template <class T> auto all() -> EnableForEnum<T, EnumRange<T>> {
-	return EnumRange<T>(0, count<T>());
-}
+template <class T, EnableIfEnum<T>...> EnumRange<T> all() { return EnumRange<T>(0, count<T>()); }
 
-template <class T> auto next(T value) -> EnableForEnum<T, T> {
-	return T((int(value) + 1) % count<T>());
-}
+template <class T, EnableIfEnum<T>...> T next(T value) { return T((int(value) + 1) % count<T>()); }
 
-template <class T> auto prev(T value) -> EnableForEnum<T, T> {
+template <class T, EnableIfEnum<T>...> T prev(T value) {
 	return T((int(value) + (count<T>() - 1)) % count<T>());
 }
 }

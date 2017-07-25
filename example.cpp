@@ -12,8 +12,7 @@ using namespace std;
 FWK_ENUM(MyEnum, item_one, item_two, item_three, item_four);
 FWK_ENUM(MyOtherEnum, weapon, armor, pants, hat, other);
 
-template <class T>
-auto operator<<(ostream &os, T value) -> typename enable_if<IsEnum<T>::value, ostream &>::type {
+template <class T, EnableIfEnum<T>...> ostream &operator<<(ostream &os, T value) {
 	return os << toString(value);
 }
 
