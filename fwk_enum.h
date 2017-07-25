@@ -47,6 +47,8 @@ namespace detail {
 	};
 }
 
+template <bool value, class T1, class T2>
+using Conditional = typename std::conditional<value, T1, T2>::type;
 template <bool cond, class InvalidArg = DisabledType>
 using EnableIf =
 	typename std::conditional<cond, detail::ValidType, InvalidArg>::type::template Arg<EnabledType>;
@@ -63,9 +65,9 @@ template <class Type> class EnumRange {
 			return *this;
 		}
 
-		bool operator<(const Iter &rhs) const { return pos < rhs.pos; }
-		bool operator==(const Iter &rhs) const { return pos == rhs.pos; }
-		bool operator!=(const Iter &rhs) const { return pos != rhs.pos; }
+		bool operator<(Iter rhs) const { return pos < rhs.pos; }
+		bool operator==(Iter rhs) const { return pos == rhs.pos; }
+		bool operator!=(Iter rhs) const { return pos != rhs.pos; }
 
 	  private:
 		int pos;
@@ -148,6 +150,80 @@ template <class T, EnableIfEnum<T>...> T next(T value) { return T((int(value) + 
 template <class T, EnableIfEnum<T>...> T prev(T value) {
 	return T((int(value) + (count<T>() - 1)) % count<T>());
 }
+
+template <class T, EnableIfEnum<T>...>
+using BestFlagsBase =
+	Conditional<count<T>() <= 8, unsigned char,
+				Conditional<count<T>() <= 16, unsigned short,
+							Conditional<count<T>() <= 32, unsigned int, unsigned long long>>>;
+
+template <class T, class Base_ = BestFlagsBase<T>> struct EnumFlags {
+	enum { max_flags = fwk::count<T>() };
+	using Base = Base_;
+	static constexpr const Base mask =
+		(Base(1) << (max_flags - 1)) - Base(1) + (Base(1) << (max_flags - 1));
+
+	static_assert(isEnum<T>(), "EnumFlags<> should be based on fwk-enum");
+	static_assert(std::is_unsigned<Base>::value, "Base type for EnumFlags<> should be unsigned");
+	static_assert(fwk::count<T>() <= sizeof(Base) * 8, "Base type not big enough");
+
+	constexpr EnumFlags() : bits(0) {}
+	constexpr EnumFlags(T value) : bits(Base(1) << uint(value)) {}
+	constexpr explicit EnumFlags(Base bits) : bits(bits) {}
+	template <class TBase> constexpr EnumFlags(EnumFlags<T, TBase> rhs) : bits(rhs.bits) {}
+
+	constexpr EnumFlags operator|(EnumFlags rhs) const { return EnumFlags(bits | rhs.bits); }
+	constexpr EnumFlags operator&(EnumFlags rhs) const { return EnumFlags(bits & rhs.bits); }
+	constexpr EnumFlags operator^(EnumFlags rhs) const { return EnumFlags(bits ^ rhs.bits); }
+	constexpr EnumFlags operator~() const { return EnumFlags((~bits) & (mask)); }
+
+	constexpr void operator|=(EnumFlags rhs) { bits |= rhs.bits; }
+	constexpr void operator&=(EnumFlags rhs) { bits &= rhs.bits; }
+	constexpr void operator^=(EnumFlags rhs) { bits ^= rhs.bits; }
+
+	constexpr bool operator==(T rhs) const { return bits == (Base(1) << int(rhs)); }
+	constexpr bool operator==(EnumFlags rhs) const { return bits == rhs.bits; }
+	constexpr bool operator!=(EnumFlags rhs) const { return bits != rhs.bits; }
+
+	constexpr explicit operator bool() const { return bits != 0; }
+
+	static constexpr EnumFlags all() { return EnumFlags(mask); }
+
+	Base bits;
+};
+
+template <class T, EnableIfEnum<T>...> constexpr EnumFlags<T> flag(T val) {
+	return EnumFlags<T>(val);
+}
+
+template <class T, EnableIfEnum<T>...> constexpr EnumFlags<T> operator|(T lhs, T rhs) {
+	return EnumFlags<T>(lhs) | rhs;
+}
+
+template <class T, EnableIfEnum<T>...> constexpr EnumFlags<T> operator&(T lhs, T rhs) {
+	return EnumFlags<T>(lhs) & rhs;
+}
+
+template <class T, EnableIfEnum<T>...> constexpr EnumFlags<T> operator^(T lhs, T rhs) {
+	return EnumFlags<T>(lhs) ^ rhs;
+}
+
+template <class T, EnableIfEnum<T>...> constexpr EnumFlags<T> operator~(T bit) {
+	return ~EnumFlags<T>(bit);
+}
+
+namespace detail {
+	template <class T> struct IsEnumFlags {
+		enum { value = 0 };
+	};
+	template <class T, class Base> struct IsEnumFlags<EnumFlags<T, Base>> {
+		enum { value = 1 };
+	};
+}
+
+template <class T> constexpr bool isEnumFlags() { return detail::IsEnumFlags<T>::value; }
+
+template <class T> using EnableIfEnumFlags = EnableIf<detail::IsEnumFlags<T>::value>;
 }
 
 #endif
