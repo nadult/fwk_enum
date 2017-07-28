@@ -3,11 +3,11 @@
 It's a header-only C++14 library with an improved enum class. Features:  
 
 - ability to iterate over, enumerate in a range-for and count all elements  
-- flag support without any additional code
+- type-safe bitwise operations support without any additional code
 - conversion to / from strings (const char*)  
 - no weirdness, you can use it just like you would use enum class  
 - VERY lightweight: less than 250 lines of code in a single file  
-- fast compilation and low runtime overhead  
+- decent compilation speed and low runtime overhead  
 - depends only on boost (preprocessor & optional)  
 - enums safe to use in switches (assuming decent compiler)  
 
@@ -53,7 +53,7 @@ for(auto elem : all<MyOtherEnum>())
 flags1 = MyEnum::item_one | MyEnum::item_two | MyEnum::item_three;
 flags1 == ~MyEnum::item_four;
 flags1.bits == 1 + 2 + 4;
-flag(MyEnum::item_four) == 8;
+flag(MyEnum::item_four).bits == 8;
 
 // MyFlags uses unsigned char as underlying type because MyEnum has only 4 elements
 using MyFlags = EnumFlags<MyEnum>;
