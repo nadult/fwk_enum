@@ -1,6 +1,5 @@
-/* Copyright (C) 2017 Krzysztof Jakubowski <nadult@fastmail.fm>
-
-   This file is part of fwk::enum. */
+// Copyright (C) Krzysztof Jakubowski <nadult@fastmail.fm>
+// This file is part of libfwk. See license.txt for details.
 
 #include "fwk_enum.h"
 #include <iostream>
@@ -40,7 +39,8 @@ void func(MyFlags flags) {
 
 int main() {
 	assert(fromString<MyEnum>("item_two") == MyEnum::item_two);
-	assert(fromString<MyEnum>("not an item") == boost::none);
+	assert(MyEnum::item_three != fromString<MyEnum>("item_four"));
+	assert(!fromString<MyEnum>("not an item"));
 	assert(string("pants") == toString(MyOtherEnum::pants));
 
 	string text;
