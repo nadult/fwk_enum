@@ -6,7 +6,6 @@
 
 #include <cassert>
 #include <cstring>
-#include <string>
 #include <type_traits>
 
 namespace fwk {
@@ -201,10 +200,6 @@ template <class T, EnableIfEnum<T>...> MaybeEnum<T> fromString(const char *str) 
 	return MaybeEnum<T>();
 }
 
-template <class T, EnableIfEnum<T>...> T fromString(const std::string &str) {
-	return fromString<T>(str.c_str());
-}
-
 template <class T, EnableIfEnum<T>...> const char *toString(T value) {
 	return enumInfo(T()).toString((int)value);
 }
@@ -238,7 +233,7 @@ template <class T, class Base_ = BestFlagsBase<T>> struct EnumFlags {
 	static_assert(fwk::count<T>() <= sizeof(Base) * 8, "Base type not big enough");
 
 	constexpr EnumFlags() : bits(0) {}
-	constexpr EnumFlags(T value) : bits(Base(1) << uint(value)) {}
+	constexpr EnumFlags(T value) : bits(Base(1) << unsigned(value)) {}
 	constexpr explicit EnumFlags(Base bits) : bits(bits) {}
 	template <class TBase> constexpr EnumFlags(EnumFlags<T, TBase> rhs) : bits(rhs.bits) {}
 
