@@ -1,5 +1,5 @@
 // Copyright (C) Krzysztof Jakubowski <nadult@fastmail.fm>
-// This file is part of libfwk. See license.txt for details.
+// This file is part of fwk::enum. See license.txt for details.
 
 #include "fwk_enum.h"
 #include <iostream>
